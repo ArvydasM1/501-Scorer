@@ -1,0 +1,14 @@
+{
+  "name": "501-scorer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Darts scorer (501 / 301 / 701) hosted on Cloudflare",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "node test/scoring.test.js"
+  },
+  "devDependencies": {
+    "wrangler": "^4"
+  }
+}
