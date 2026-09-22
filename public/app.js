@@ -96,10 +96,31 @@
     return checkoutRoute(remaining, doubleOut) ? 3 : 0;
   }
 
+  // ---------- Per-dart entry ----------
+  const MULT_FACTOR = { S: 1, D: 2, T: 3 };
+  function dartFromHit(number, mult) {
+    if (number === 0) return { label: 'Miss', value: 0, kind: 'S' };
+    if (number === 25) return mult === 'D' ? { label: 'Bull', value: 50, kind: 'D' } : { label: '25', value: 25, kind: 'S' };
+    return { label: (mult === 'S' ? '' : mult) + number, value: number * MULT_FACTOR[mult], kind: mult };
+  }
+  // Resolves a partially or fully entered visit. Returns the visit to record, or null if more darts are needed.
+  function evaluateDarts(remaining, darts, doubleOut) {
+    const scored = darts.reduce((sum, d) => sum + d.value, 0);
+    const after = remaining - scored;
+    const last = darts[darts.length - 1];
+    const hits = darts.map((d) => d.label);
+    if (after < 0 || (doubleOut && after === 1) || (after === 0 && doubleOut && last.kind !== 'D')) {
+      return { score: 0, entered: scored, darts: 3, bust: true, checkout: false, hits };
+    }
+    if (after === 0) return { score: scored, entered: scored, darts: darts.length, bust: false, checkout: true, hits };
+    if (darts.length >= 3) return { score: scored, entered: scored, darts: 3, bust: false, checkout: false, hits };
+    return null;
+  }
+
   // ---------- State ----------
-  const defaultSettings = () => ({ startScore: 501, doubleOut: true, legsToWin: 3, players: ['Player 1', 'Player 2'] });
+  const defaultSettings = () => ({ startScore: 501, doubleOut: true, legsToWin: 3, players: ['Player 1', 'Player 2'], inputMode: 'total' });
   let state = { screen: 'setup', settings: defaultSettings(), match: null, roster: [], history: [] };
-  const ui = { entry: '', modal: null, flash: null, flashTimer: null, manageRoster: false, installPrompt: null };
+  const ui = { entry: '', darts: [], mult: 'S', modal: null, flash: null, flashTimer: null, manageRoster: false, installPrompt: null };
 
   function save() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (_) { /* storage unavailable */ }
@@ -114,6 +135,8 @@
       if (!Array.isArray(state.roster)) state.roster = [];
       if (!Array.isArray(state.history)) state.history = [];
       if (!['setup', 'game', 'history'].includes(state.screen)) state.screen = 'setup';
+      if (!['total', 'darts'].includes(state.settings.inputMode)) state.settings.inputMode = 'total';
+      if (state.match && !['total', 'darts'].includes(state.match.settings.inputMode)) state.match.settings.inputMode = state.settings.inputMode;
     } catch (_) { /* ignore corrupt storage */ }
   }
 
@@ -259,31 +282,51 @@
       ui.modal = { type: 'darts', score, minDarts: ev.minDarts };
       render(); return;
     }
-    leg.visits.push({ score: ev.bust ? 0 : score, entered: score, darts: 3, bust: !!ev.bust, checkout: false });
-    ui.entry = '';
-    if (ev.bust) flash('Bust!', 'bad');
-    save(); render();
+    recordVisit({ score: ev.bust ? 0 : score, entered: score, darts: 3, bust: !!ev.bust, checkout: false });
   }
   function confirmCheckout(darts) {
-    const m = state.match;
     const modal = ui.modal;
-    if (!m || !modal || modal.type !== 'darts') return;
+    if (!state.match || !modal || modal.type !== 'darts') return;
+    ui.modal = null;
+    recordVisit({ score: modal.score, entered: modal.score, darts, bust: false, checkout: true });
+  }
+  function addDart(number) {
+    const m = state.match;
+    if (!m || matchWinner(m) >= 0 || ui.darts.length >= 3) return;
+    ui.darts.push(dartFromHit(number, ui.mult));
+    ui.mult = 'S';
+    ui.entry = '';
+    const leg = currentLeg(m);
+    const remaining = legRemaining(m, leg)[currentPlayer(m)];
+    const visit = evaluateDarts(remaining, ui.darts, m.settings.doubleOut);
+    if (visit) recordVisit(visit); else render();
+  }
+  function removeDart() {
+    ui.darts.pop();
+    ui.mult = 'S';
+    render();
+  }
+  function recordVisit(visit) {
+    const m = state.match;
     const leg = currentLeg(m);
     const p = currentPlayer(m);
     const n = playerCount(m);
-    leg.visits.push({ score: modal.score, entered: modal.score, darts, bust: false, checkout: true });
-    leg.winner = p;
-    const legNo = m.legs.length;
-    const legDarts = playerStats({ settings: m.settings, legs: [leg] }, p).darts;
-    ui.entry = '';
-    if (matchWinner(m) < 0) {
-      m.legs.push({ starter: (leg.starter + 1) % n, visits: [], winner: null });
-      ui.modal = { type: 'legWon', player: p, legNo, darts: legDarts, checkout: modal.score };
-    } else {
-      const summary = summarizeMatch(m);
-      state.history.unshift(summary);
-      m.recordedId = summary.id;
-      ui.modal = null;
+    leg.visits.push(visit);
+    ui.entry = ''; ui.darts = []; ui.mult = 'S';
+    if (visit.bust) flash('Bust!', 'bad');
+    if (visit.checkout) {
+      leg.winner = p;
+      const legNo = m.legs.length;
+      const legDarts = playerStats({ settings: m.settings, legs: [leg] }, p).darts;
+      if (matchWinner(m) < 0) {
+        m.legs.push({ starter: (leg.starter + 1) % n, visits: [], winner: null });
+        ui.modal = { type: 'legWon', player: p, legNo, darts: legDarts, checkout: visit.score };
+      } else {
+        const summary = summarizeMatch(m);
+        state.history.unshift(summary);
+        m.recordedId = summary.id;
+        ui.modal = null;
+      }
     }
     save(); render();
   }
@@ -291,6 +334,7 @@
     const m = state.match;
     if (!canUndo(m)) return;
     ui.modal = null;
+    ui.darts = []; ui.mult = 'S';
     let leg = currentLeg(m);
     if (leg.visits.length === 0) { m.legs.pop(); leg = currentLeg(m); }
     const v = leg.visits.pop();
@@ -400,6 +444,13 @@
             </div>
             <span class="muted">${s.legsToWin === 1 ? 'leg' : 'legs'}</span>
           </div>
+          <div class="row">
+            <span>Score entry</span>
+            <div class="segmented compact" role="group" aria-label="Score entry mode">
+              <button class="seg ${s.inputMode === 'total' ? 'on' : ''}" data-action="set-mode" data-value="total">Total</button>
+              <button class="seg ${s.inputMode === 'darts' ? 'on' : ''}" data-action="set-mode" data-value="darts">Per dart</button>
+            </div>
+          </div>
         </section>
         <section class="card">
           <h2>Players</h2>
@@ -436,18 +487,23 @@
     const won = legsWon(m);
     const winner = matchWinner(m);
     const active = winner < 0 ? currentPlayer(m) : -1;
+    const dartMode = s.inputMode === 'darts';
+    const partial = dartMode ? ui.darts.reduce((sum, d) => sum + d.value, 0) : 0;
+    const dartsLeft = dartMode ? 3 - ui.darts.length : 3;
 
     const cards = s.players.map((name, p) => {
       const st = playerStats(m, p);
       const last = lastVisitOf(m, leg, p);
-      const route = p === active ? checkoutRoute(rem[p], s.doubleOut) : null;
+      const live = p === active ? rem[p] - partial : rem[p];
+      let route = p === active ? checkoutRoute(live, s.doubleOut) : null;
+      if (route && route.length > dartsLeft) route = null;
       const legsMark = s.legsToWin <= 7
         ? Array.from({ length: s.legsToWin }, (_, i) => `<i class="${i < won[p] ? 'on' : ''}"></i>`).join('')
         : `<em>${won[p]}</em>`;
       return `
         <div class="pcard ${p === active ? 'active' : ''} ${p === winner ? 'winner' : ''}">
           <div class="phead"><span class="pname">${esc(name)}</span><span class="legs" title="Legs won">${legsMark}</span></div>
-          <div class="remaining">${rem[p]}</div>
+          <div class="remaining">${live}</div>
           <div class="pmeta">
             <span>Avg <b>${fmtAvg(st.avg)}</b></span>
             <span>Last <b>${last ? (last.bust ? 'Bust' : last.score) : '&ndash;'}</b></span>
@@ -462,7 +518,8 @@
       const idx = leg.visits.length - 1 - i;
       const p = playerOfVisit(leg, idx, n);
       const label = v.bust ? `<span class="bad">Bust</span> <span class="muted">(${v.entered})</span>` : v.score;
-      return `<li><span class="hp">${esc(s.players[p])}</span><span class="hs">${label}</span><span class="hr muted">${afterByVisit[idx]}</span></li>`;
+      const hits = v.hits ? `<small class="muted">${v.hits.join(' ')}</small>` : '';
+      return `<li><span class="hp">${esc(s.players[p])} ${hits}</span><span class="hs">${label}</span><span class="hr muted">${afterByVisit[idx]}</span></li>`;
     }).join('');
 
     let bottom;
@@ -484,9 +541,36 @@
             <button class="btn ghost" data-action="setup">Change setup</button>
           </div>
         </section>`;
+    } else if (dartMode) {
+      const prefix = ui.mult === 'S' ? '' : ui.mult;
+      const slots = [0, 1, 2].map((i) => {
+        const d = ui.darts[i];
+        const isNext = i === ui.darts.length;
+        const text = d ? d.label : (isNext && ui.entry ? prefix + ui.entry : (isNext ? prefix || '&middot;' : '&middot;'));
+        return `<span class="slot ${d ? 'filled' : ''} ${isNext ? 'next' : ''}">${text}</span>`;
+      }).join('');
+      bottom = `
+        <section class="entry-area">
+          ${renderModeSwitch(s)}
+          <div class="dart-entry" aria-label="Darts entered">
+            <div class="dart-slots">${slots}</div>
+            <div class="dart-sum"><b>${partial}</b><span class="muted"> scored</span></div>
+          </div>
+          <div class="mults">
+            ${['S', 'D', 'T'].map((k) => `<button class="seg ${ui.mult === k ? 'on' : ''}" data-action="mult" data-value="${k}">${{ S: 'Single', D: 'Double', T: 'Treble' }[k]}</button>`).join('')}
+            <button class="seg miss" data-action="hit" data-value="0">Miss</button>
+          </div>
+          <div class="board-grid">
+            ${Array.from({ length: 20 }, (_, i) => i + 1).map((n) => `<button class="key hit" data-action="hit" data-value="${n}">${prefix}${n}</button>`).join('')}
+            <button class="key hit bull" data-action="hit" data-value="25" ${ui.mult === 'T' ? 'disabled' : ''}>${ui.mult === 'D' ? 'Bull' : '25'}</button>
+            <button class="key hit alt" data-action="remove-dart" aria-label="Remove last dart" ${ui.darts.length ? '' : 'disabled'}>&#9003;</button>
+            <button class="key hit alt" data-action="undo" aria-label="Undo last visit" ${canUndo(m) ? '' : 'disabled'}>&#8630;</button>
+          </div>
+        </section>`;
     } else {
       bottom = `
         <section class="entry-area">
+          ${renderModeSwitch(s)}
           <div class="entry ${ui.entry ? '' : 'empty'}" aria-label="Score entry">${ui.entry || 'Enter score'}</div>
           <div class="chips">
             ${QUICK_SCORES.map((q) => `<button class="chip" data-action="quick" data-value="${q}">${q}</button>`).join('')}
@@ -514,6 +598,14 @@
         <section class="players n${Math.min(n, 4)}">${cards}</section>
         ${bottom}
         ${leg.visits.length ? `<section class="history"><ul>${history}</ul></section>` : ''}
+      </div>`;
+  }
+
+  function renderModeSwitch(s) {
+    return `
+      <div class="segmented compact mode-switch" role="group" aria-label="Score entry mode">
+        <button class="seg ${s.inputMode === 'total' ? 'on' : ''}" data-action="set-mode" data-value="total">Total</button>
+        <button class="seg ${s.inputMode === 'darts' ? 'on' : ''}" data-action="set-mode" data-value="darts">Per dart</button>
       </div>`;
   }
 
@@ -628,7 +720,7 @@
 
   // Expose the pure rules for `npm test` (Node) without touching the DOM.
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { evaluateVisit, checkoutRoute, DOUBLE_OUT_TABLE, IMPOSSIBLE_SCORES, SEGMENTS, newMatch, legRemaining, legsWon, matchWinner, playerStats, aggregateHistory };
+    module.exports = { evaluateVisit, evaluateDarts, dartFromHit, checkoutRoute, DOUBLE_OUT_TABLE, IMPOSSIBLE_SCORES, SEGMENTS, newMatch, legRemaining, legsWon, matchWinner, playerStats, aggregateHistory };
     return;
   }
 
@@ -659,8 +751,17 @@
         break;
       case 'roster-remove': state.roster = state.roster.filter((n) => n !== el.dataset.name); if (!state.roster.length) ui.manageRoster = false; break;
       case 'roster-manage': ui.manageRoster = !ui.manageRoster; break;
+      case 'set-mode':
+        s.inputMode = el.dataset.value;
+        if (m) m.settings.inputMode = el.dataset.value;
+        ui.entry = ''; ui.darts = []; ui.mult = 'S';
+        break;
       case 'start': startGame(); return;
       case 'resume': state.screen = 'game'; break;
+      // per-dart entry
+      case 'mult': ui.mult = ui.mult === el.dataset.value ? 'S' : el.dataset.value; break;
+      case 'hit': addDart(Number(el.dataset.value)); return;
+      case 'remove-dart': removeDart(); return;
       case 'install':
         if (ui.installPrompt) { const p = ui.installPrompt; ui.installPrompt = null; p.prompt(); }
         break;
@@ -729,7 +830,7 @@
   });
 
   document.addEventListener('keydown', (e) => {
-    if (e.target.matches('input, textarea')) return;
+    if (e.target && e.target.matches && e.target.matches('input, textarea')) return;
     if (ui.modal) {
       if (e.key === 'Escape') { ui.modal = null; render(); }
       else if (ui.modal.type === 'darts' && /^[123]$/.test(e.key) && Number(e.key) >= ui.modal.minDarts) confirmCheckout(Number(e.key));
@@ -737,6 +838,19 @@
       return;
     }
     if (state.screen !== 'game' || !state.match) return;
+    if (state.match.settings.inputMode === 'darts') {
+      // s/d/t pick the multiplier, digits type a number, Enter confirms it, b = bull/25, m = miss.
+      const k = e.key.toLowerCase();
+      if (/^\d$/.test(k)) { const next = (ui.entry + k).replace(/^0+(?=\d)/, ''); if (Number(next) <= 25) { ui.entry = next; render(); } e.preventDefault(); }
+      else if (k === 's' || k === 'd' || k === 't') { ui.mult = k.toUpperCase(); render(); }
+      else if (k === 'b') { addDart(25); }
+      else if (k === 'm') { addDart(0); }
+      else if (k === 'enter' && ui.entry !== '') { const n = Number(ui.entry); if ((n >= 1 && n <= 20) || n === 25 || n === 0) addDart(n); else { ui.entry = ''; render(); } e.preventDefault(); }
+      else if (k === 'backspace') { if (ui.entry) { ui.entry = ui.entry.slice(0, -1); render(); } else removeDart(); e.preventDefault(); }
+      else if ((e.ctrlKey || e.metaKey) && k === 'z') { undo(); e.preventDefault(); }
+      else if (k === 'escape') { ui.entry = ''; ui.mult = 'S'; render(); }
+      return;
+    }
     if (/^\d$/.test(e.key)) { appendDigit(e.key); e.preventDefault(); }
     else if (e.key === 'Backspace') { ui.entry = ui.entry.slice(0, -1); render(); e.preventDefault(); }
     else if (e.key === 'Enter' && ui.entry !== '') { submitScore(Number(ui.entry)); e.preventDefault(); }

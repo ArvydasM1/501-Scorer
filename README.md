@@ -3,7 +3,8 @@
 A fast, mobile-friendly darts scorer for 501 / 301 / 701, built as a static single-page app and hosted on Cloudflare.
 
 - 1 to 8 players, first to N legs, double-out or straight-out
-- Bust detection, impossible-score validation, checkout suggestions (standard double-out table)
+- Two ways to score: type the visit total, or tap each dart (Single / Double / Treble + number, Miss, 25, Bull). Per-dart entry resolves busts and checkouts automatically and records the exact dart count. Switch modes any time from the game screen or setup.
+- Bust detection, impossible-score validation, checkout suggestions (standard double-out table) that narrow to what's finishable with the darts you have left
 - 3-dart averages, 180s / 140+ / 100+ counts, high checkout, best leg
 - Undo, keyboard support, and automatic save so a refresh never loses the game
 - Remembers players: saved names appear as one-tap chips on the setup screen

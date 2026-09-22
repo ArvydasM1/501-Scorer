@@ -1,6 +1,6 @@
 'use strict';
 const assert = require('node:assert/strict');
-const { evaluateVisit, checkoutRoute, DOUBLE_OUT_TABLE, IMPOSSIBLE_SCORES, newMatch, legRemaining, matchWinner, playerStats, aggregateHistory } = require('../public/app.js');
+const { evaluateVisit, evaluateDarts, dartFromHit, checkoutRoute, DOUBLE_OUT_TABLE, IMPOSSIBLE_SCORES, newMatch, legRemaining, matchWinner, playerStats, aggregateHistory } = require('../public/app.js');
 
 let passed = 0;
 function test(name, fn) {
@@ -120,6 +120,36 @@ test('lifetime stats aggregate saved match summaries by player name', () => {
   assert.equal(bob.bestLeg, 18);
   assert.equal(bob.highCheckout, 80);
   assert.deepEqual(aggregateHistory([]), []);
+});
+
+test('per-dart hits map to the right segment values', () => {
+  assert.deepEqual(dartFromHit(20, 'T'), { label: 'T20', value: 60, kind: 'T' });
+  assert.deepEqual(dartFromHit(16, 'D'), { label: 'D16', value: 32, kind: 'D' });
+  assert.deepEqual(dartFromHit(5, 'S'), { label: '5', value: 5, kind: 'S' });
+  assert.deepEqual(dartFromHit(25, 'S'), { label: '25', value: 25, kind: 'S' });
+  assert.deepEqual(dartFromHit(25, 'D'), { label: 'Bull', value: 50, kind: 'D' });
+  assert.deepEqual(dartFromHit(25, 'T'), { label: '25', value: 25, kind: 'S' });
+  assert.deepEqual(dartFromHit(0, 'T'), { label: 'Miss', value: 0, kind: 'S' });
+});
+
+test('per-dart visits resolve on the third dart, a checkout, or a bust', () => {
+  const T20 = dartFromHit(20, 'T'), D20 = dartFromHit(20, 'D'), S20 = dartFromHit(20, 'S'), S1 = dartFromHit(1, 'S'), Bull = dartFromHit(25, 'D');
+  assert.equal(evaluateDarts(501, [T20], true), null);
+  assert.equal(evaluateDarts(501, [T20, T20], true), null);
+  assert.deepEqual(evaluateDarts(501, [T20, T20, T20], true), { score: 180, entered: 180, darts: 3, bust: false, checkout: false, hits: ['T20', 'T20', 'T20'] });
+  // 100 out in two darts: exact dart count, no prompt needed.
+  assert.deepEqual(evaluateDarts(100, [T20, D20], true), { score: 100, entered: 100, darts: 2, bust: false, checkout: true, hits: ['T20', 'D20'] });
+  assert.deepEqual(evaluateDarts(50, [Bull], true), { score: 50, entered: 50, darts: 1, bust: false, checkout: true, hits: ['Bull'] });
+  // Reaching zero on a single is a bust with double out, but a finish straight out.
+  assert.equal(evaluateDarts(20, [S20], true).bust, true);
+  assert.deepEqual(evaluateDarts(20, [S20], false), { score: 20, entered: 20, darts: 1, bust: false, checkout: true, hits: ['20'] });
+  // Leaving 1 busts with double out; going below zero always busts; busts count three darts.
+  assert.deepEqual(evaluateDarts(21, [S20], true), { score: 0, entered: 20, darts: 3, bust: true, checkout: false, hits: ['20'] });
+  assert.equal(evaluateDarts(21, [S20], false), null);
+  assert.equal(evaluateDarts(40, [T20], true).bust, true);
+  assert.equal(evaluateDarts(2, [S1], true).bust, true, 'leaving 1 busts');
+  const miss = dartFromHit(0, 'S');
+  assert.deepEqual(evaluateDarts(501, [miss, miss, miss], true), { score: 0, entered: 0, darts: 3, bust: false, checkout: false, hits: ['Miss', 'Miss', 'Miss'] });
 });
 
 if (!process.exitCode) console.log(`All ${passed} tests passed`);
