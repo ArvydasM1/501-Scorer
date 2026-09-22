@@ -410,6 +410,8 @@
     else if (state.screen === 'history') body = renderHistory();
     else body = renderSetup();
     app.innerHTML = body + renderModal() + renderFlash();
+    // The static landing copy in index.html is only shown alongside the setup screen.
+    document.body.dataset.screen = state.screen === 'game' && !state.match ? 'setup' : state.screen;
   }
 
   function renderSetup() {

@@ -1,7 +1,7 @@
 /* Service worker: caches the app shell so the scorer opens and works offline.
    Strategy: serve from cache immediately, refresh the cache from the network in the
    background (stale-while-revalidate), so a new deploy is picked up on the next open. */
-const CACHE = 'darts-scorer-shell-v1';
+const CACHE = 'darts-scorer-shell-v2';
 const SHELL = ['./', './index.html', './app.js', './styles.css', './manifest.webmanifest', './icon.svg'];
 
 self.addEventListener('install', (event) => {
@@ -20,12 +20,18 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return;
 
+  // Cache by path only, so "/?x=1" and "/" share (and refresh) the same entry.
+  const keyUrl = new URL(request.url);
+  keyUrl.search = '';
+  keyUrl.hash = '';
+  const cacheKey = keyUrl.href;
+
   event.respondWith(
     caches.open(CACHE).then(async (cache) => {
-      const cached = await cache.match(request, { ignoreSearch: true });
+      const cached = await cache.match(cacheKey);
       const refresh = fetch(request)
         .then((response) => {
-          if (response && response.ok) cache.put(request, response.clone());
+          if (response && response.ok) cache.put(cacheKey, response.clone());
           return response;
         })
         .catch(() => null);

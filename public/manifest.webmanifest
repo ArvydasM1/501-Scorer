@@ -1,11 +1,16 @@
 {
-  "name": "Darts Scorer",
-  "short_name": "Darts",
-  "description": "501 / 301 / 701 darts scorer with checkout suggestions",
+  "name": "Darts Scorer – 501, 301, 701",
+  "short_name": "Darts Scorer",
+  "description": "Free darts scorer with checkout suggestions, bust detection, averages and match history. Works offline.",
+  "id": "/",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#0f1115",
   "theme_color": "#0f1115",
+  "categories": ["sports", "games", "utilities"],
+  "lang": "en",
   "icons": [
     { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
   ]

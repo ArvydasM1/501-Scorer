@@ -4,15 +4,92 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0f1115">
-  <meta name="description" content="A fast, mobile-friendly 501 / 301 / 701 darts scorer with checkout suggestions, bust detection, averages and undo.">
-  <title>Darts Scorer</title>
+  <title>Free Online Darts Scorer – 501, 301, 701 with Checkout Hints</title>
+  <meta name="description" content="Free darts scorer for 501, 301 and 701. Checkout suggestions, bust detection, 3-dart averages, per-dart or total entry, match history. No app download, no ads, works offline on any phone.">
+  <link rel="canonical" href="https://501scorer.domek.co.uk/">
+  <meta name="robots" content="index, follow">
+
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Darts Scorer">
+  <meta property="og:title" content="Free Online Darts Scorer – 501, 301, 701">
+  <meta property="og:description" content="Score your darts games in the browser. Checkout hints, averages, busts, match history. Works offline, no app store, no ads.">
+  <meta property="og:url" content="https://501scorer.domek.co.uk/">
+  <meta property="og:image" content="https://501scorer.domek.co.uk/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Darts Scorer app showing a player on 141 with the checkout T20 T19 D12">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Free Online Darts Scorer – 501, 301, 701">
+  <meta name="twitter:description" content="Checkout hints, averages, busts, match history. Works offline, no app store, no ads.">
+  <meta name="twitter:image" content="https://501scorer.domek.co.uk/og.png">
+
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon.svg">
   <link rel="stylesheet" href="styles.css">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Darts Scorer",
+    "url": "https://501scorer.domek.co.uk/",
+    "description": "Free online darts scorer for 501, 301 and 701 with checkout suggestions, bust detection, averages and match history. Works offline.",
+    "applicationCategory": "SportsApplication",
+    "operatingSystem": "Any",
+    "browserRequirements": "Requires JavaScript",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "GBP" },
+    "isAccessibleForFree": true,
+    "image": "https://501scorer.domek.co.uk/og.png",
+    "codeRepository": "https://github.com/ArvydasM1/501-Scorer",
+    "featureList": [
+      "501, 301 and 701 games",
+      "Double-out or straight-out",
+      "Checkout suggestions",
+      "Bust detection",
+      "Per-dart or visit total entry",
+      "3-dart averages, 180s, high checkout, best leg",
+      "Match history and lifetime stats",
+      "Works offline, installable as an app"
+    ]
+  }
+  </script>
 </head>
 <body>
   <div id="app" aria-live="polite"></div>
+
+  <section class="landing" id="about">
+    <div class="landing-inner">
+      <h2>Free online darts scorer for 501, 301 and 701</h2>
+      <p>Darts Scorer keeps score for your darts games straight from the browser. No app store, no account, no ads. Open it on a phone, tablet or laptop, tap the players' names and start throwing. It saves after every visit, so a locked phone or a lost signal never loses the game.</p>
+
+      <h3>What it does</h3>
+      <ul>
+        <li><strong>501, 301 and 701</strong> for 1 to 8 players, first to any number of legs, double-out or straight-out.</li>
+        <li><strong>Checkout suggestions</strong> from the standard checkout table, shown for the player at the oche and narrowed to what is finishable with the darts left.</li>
+        <li><strong>Bust detection</strong> and validation of impossible scores, so the maths is never wrong on a busy night.</li>
+        <li><strong>Two ways to score:</strong> type the visit total, or tap each dart (single, double, treble, miss, 25, bull).</li>
+        <li><strong>Statistics:</strong> 3-dart average, 180s, 140+ and 100+ visits, highest checkout, best leg, plus lifetime stats across every match.</li>
+        <li><strong>Undo</strong> any visit, even back across a finished leg.</li>
+      </ul>
+
+      <h3>Works offline, installs like an app</h3>
+      <p>Darts Scorer is a progressive web app. After the first visit it loads instantly with no connection. On Android and desktop Chrome an <em>Install</em> button appears on the setup screen; on iPhone use <em>Share</em> then <em>Add to Home Screen</em>. Your players, matches and stats stay on your device, and you can export a backup file from the History screen.</p>
+
+      <h3>Frequently asked</h3>
+      <dl>
+        <dt>Is it really free?</dt>
+        <dd>Yes. No ads, no premium tier, no sign-up. The source code is <a href="https://github.com/ArvydasM1/501-Scorer">open on GitHub</a>.</dd>
+        <dt>Does it need an internet connection?</dt>
+        <dd>Only the first time. After that it works offline, including in a pub cellar.</dd>
+        <dt>Which checkout does it suggest?</dt>
+        <dd>The commonly used route for every finish from 2 to 170, such as T20 T20 Bull for 170 or T20 T19 D12 for 141. With one or two darts left it only shows finishes that are still possible.</dd>
+        <dt>Where is my data stored?</dt>
+        <dd>In your browser on your own device. Nothing is sent to a server. Use Export in History to back it up or move it to another phone.</dd>
+      </dl>
+    </div>
+  </section>
+
   <script src="app.js"></script>
 </body>
 </html>
