@@ -2,6 +2,8 @@
 
 A fast, mobile-friendly darts scorer for 501 / 301 / 701, built as a static single-page app and hosted on Cloudflare.
 
+**Live app: [501scorer.domek.co.uk](https://501scorer.domek.co.uk)** — open it on your phone and use "Install" or "Add to Home Screen" to keep it like an app.
+
 - 1 to 8 players, first to N legs, double-out or straight-out
 - Two ways to score: type the visit total, or tap each dart (Single / Double / Treble + number, Miss, 25, Bull). Per-dart entry resolves busts and checkouts automatically and records the exact dart count. Switch modes any time from the game screen or setup.
 - Bust detection, impossible-score validation, checkout suggestions (standard double-out table) that narrow to what's finishable with the darts you have left
@@ -30,7 +32,7 @@ npx wrangler login
 npm run deploy
 ```
 
-Wrangler prints the `*.workers.dev` URL when the deploy finishes. Add a custom domain from the Worker's settings in the Cloudflare dashboard if you want one.
+Wrangler prints the `*.workers.dev` URL when the deploy finishes. The production deployment is served on the custom domain [501scorer.domek.co.uk](https://501scorer.domek.co.uk), configured under the Worker's Settings > Domains & Routes in the Cloudflare dashboard.
 
 ### Alternative: Cloudflare Pages via Git
 
