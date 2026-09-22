@@ -187,6 +187,11 @@ b { font-weight: 600; }
 .history .hs { font-weight: 600; }
 .history .hr { text-align: right; }
 
+/* Footer */
+.app-footer { display: flex; justify-content: center; padding: 8px 0 4px; }
+.gh-link { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); text-decoration: none; font-size: 13px; padding: 8px 12px; border-radius: 10px; }
+.gh-link:hover, .gh-link:focus-visible { color: var(--text); background: var(--panel); outline: none; }
+
 /* Setup extras: roster, install, history */
 .topbar-actions { display: flex; gap: 8px; align-items: center; }
 .icon-spacer { width: 44px; }
